@@ -107,17 +107,17 @@ static void paint_graph(HWND w, HDC out)
     for (i = 0; i < NSENS; i++) {
         Sensor *se = &g.s[i];
         HPEN p;
+        POINT pt[HIST];
         int n = se->nhist;
         if (!se->avail || !se->plot || n < 2) continue;
         p = CreatePen(se->dash, 1, se->color);
         old = (HPEN)SelectObject(dc, p);
         SetBkMode(dc, TRANSPARENT);
         for (k = 0; k < n; k++) {
-            x = R - 1 - (n - 1 - k) * (R - L - 1) / (HIST - 1);
-            y = ymap(se->hist[k], T, B - T);
-            if (k == 0) MoveToEx(dc, x, y, 0);
-            else LineTo(dc, x, y);
+            pt[k].x = R - 1 - (n - 1 - k) * (R - L - 1) / (HIST - 1);
+            pt[k].y = ymap(se->hist[k], T, B - T);
         }
+        Polyline(dc, pt, n);
         SelectObject(dc, old);
         DeleteObject(p);
         li[nl] = i;

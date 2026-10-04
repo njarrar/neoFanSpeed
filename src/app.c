@@ -221,11 +221,24 @@ void app_force_full(int sensor)
     }
     g.fsActive = 1;
     if (sensor >= 0) {
+        g.fsIsFan = 0;
         rt_cpy(g.fsName, g.s[sensor].name, sizeof(g.fsName));
         app_ft(g.fsLim, g.s[sensor].limit);
         stamp_hm(g.fsTime);
     }
     app_apply_hw();
+}
+
+void app_force_full_fan(int fan)
+{
+    app_force_full(-1);
+    if (fan >= 0 && fan < NFAN) {
+        char n[16];
+        g.fsIsFan = 1;
+        rt_cpy(g.fsName, g.f[fan].name, sizeof(g.fsName));
+        wsprintfA(g.fsLim, "%s RPM", rt_fmtint(n, g.f[fan].alarm));
+        stamp_hm(g.fsTime);
+    }
 }
 
 void app_restore_prev(void)
@@ -246,10 +259,26 @@ static void trip(int id)
     if (fs) app_force_full(id);
     if (g.o.beep) MessageBeep(MB_ICONEXCLAMATION);
     g.alarmTemp = s->val;
-    if (g.o.warnWin) ui_show_alarm(id);
+    if (g.o.warnWin) ui_show_alarm(id, 0);
     if (g.o.balloon && g.hw.os.hasBalloon) {
         wsprintfA(msg, "%s is at %s.%s", s->name, app_ft(t, s->val), fs ? " Fans set to full speed." : "");
         ui_balloon("Temperature alarm", msg);
+    }
+}
+
+static void trip_fan(int id)
+{
+    Fan *f = &g.f[id];
+    int fs = g.o.failsafe && app_count_ctrl() > 0;
+    char r[24], r2[24], msg[200];
+    if (fs) app_force_full_fan(id);
+    if (g.o.beep) MessageBeep(MB_ICONEXCLAMATION);
+    g.alarmTemp = f->rpm;
+    if (g.o.warnWin) ui_show_alarm(id, 1);
+    if (g.o.balloon && g.hw.os.hasBalloon) {
+        wsprintfA(msg, "%s is at %s RPM (below %s RPM).%s", f->name, rt_fmtint(r, f->rpm), rt_fmtint(r2, f->alarm),
+                  fs ? " Fans set to full speed." : "");
+        ui_balloon("Fan speed alarm", msg);
     }
 }
 
@@ -331,6 +360,12 @@ void app_tick(int fromTimer)
             if (s->val > s->limit && !s->alerted) { s->alerted = 1; trip(i); }
             if (s->val < s->limit - 2) s->alerted = 0;
         }
+        for (i = 0; i < NFAN; i++) {
+            Fan *f = &g.f[i];
+            if (!f->avail || !f->alarmOn) { f->alerted = 0; continue; }
+            if (f->rpm < f->alarm && !f->alerted) { f->alerted = 1; trip_fan(i); }
+            if (f->rpm > f->alarm + 100) f->alerted = 0;
+        }
     }
     if (fromTimer) log_tick();
 }
@@ -383,6 +418,7 @@ void app_load_settings(void)
         f->mode = ini_int(key, "Mode", f->mode) & 3;
         f->pct = ini_int(key, "Duty", f->pct);
         if (f->pct < 20 || f->pct > 100) f->pct = 65;
+        if (f->pct < g.o.floor) f->pct = g.o.floor;   /* a lower duty is asked again */
         f->profile = ini_int(key, "Profile", f->profile) % 3;
         f->follows = ini_int(key, "Follows", f->follows);
         if (f->follows != S_HOT && (f->follows < 0 || f->follows >= NSENS)) f->follows = S_CPU;

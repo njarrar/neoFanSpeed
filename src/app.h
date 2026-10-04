@@ -48,6 +48,7 @@ typedef struct {
     int pts[NPTS][2];       /* temp C, duty % */
     int alarmOn;
     int alarm;              /* warn below this RPM */
+    int alerted;
     int allowBelow;         /* manual duty allowed under floor, -1 none */
     double hT;              /* held temperature for hysteresis */
     int rpm;
@@ -74,7 +75,7 @@ typedef struct {
     char unitAtStart;
     char recent[9][200];
     int nrecent;
-    char error[160];
+    char error[MAX_PATH + 80];
 } LogState;
 
 typedef struct {
@@ -116,9 +117,11 @@ typedef struct {
 
     /* fail-safe */
     int fsActive;
+    int fsIsFan;
     int prevMode[NFAN], prevProfile[NFAN];
     char fsName[40], fsLim[24], fsTime[8];
     int alarmSensor;
+    int alarmIsFan;
     double alarmTemp;
 
     int trayAdded;
@@ -127,7 +130,7 @@ typedef struct {
     char iniPath[MAX_PATH];
     char exeDir[MAX_PATH];
     int firstRun;
-    char reportMsg[120];
+    char reportMsg[MAX_PATH + 80];
 } App;
 
 extern App g;
@@ -141,6 +144,7 @@ void app_set_all(int profileOrAuto);  /* P_* or -1 for BIOS */
 int  app_cur_profile(void);           /* P_*, -1 BIOS, -2 custom, -3 none */
 void app_restore_prev(void);
 void app_force_full(int sensor);
+void app_force_full_fan(int fan);
 void app_reset_stats(void);
 double app_cv(double c);
 char *app_ft(char *buf, double c);   /* "54.2 °C" */
@@ -159,7 +163,7 @@ void log_header(char *out, int cap);
 void ui_refresh(void);
 void ui_refresh_static(void);
 void ui_status(void);
-void ui_show_alarm(int sensor);
+void ui_show_alarm(int id, int isFan);
 void ui_banner(void);
 void ui_tray_update(void);
 void ui_balloon(const char *title, const char *text);

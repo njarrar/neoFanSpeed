@@ -92,11 +92,12 @@ static void make_dirs(const char *path)
     }
 }
 
-/* NFS001.CSV -> NFS002.CSV; returns 0 when the name has no number */
+/* NFS001.CSV -> NFS002.CSV; returns 0 when the name has no number or
+   the number would not fit (NFS999.CSV), so logging stays on that file */
 static int next_name(char *path)
 {
     int n = rt_len(path), dot = n, i, end, start;
-    long num;
+    long num, lim = 1;
     for (i = n - 1; i >= 0 && path[i] != '\\'; i--)
         if (path[i] == '.') { dot = i; break; }
     end = dot;
@@ -106,6 +107,8 @@ static int next_name(char *path)
     num = 0;
     for (i = start; i < end; i++) num = num * 10 + (path[i] - '0');
     num++;
+    for (i = start; i < end; i++) lim *= 10;
+    if (num >= lim) return 0;
     for (i = end - 1; i >= start; i--) { path[i] = (char)('0' + num % 10); num /= 10; }
     return 1;
 }

@@ -374,11 +374,12 @@ static void tray_menu(void)
 
 void ui_banner(void)
 {
-    char t[400];
+    char t[MAX_PATH + 400];
     const char *btn = 0;
     t[0] = 0;
     if (g.fsActive && !g.alarmDlg) {
-        wsprintfA(t, "Fans set to full speed.\n%s passed %s at %s. Your own fan settings are saved.", g.fsName, g.fsLim, g.fsTime);
+        wsprintfA(t, "Fans set to full speed.\n%s %s %s at %s. Your own fan settings are saved.",
+                  g.fsName, g.fsIsFan ? "dropped below" : "passed", g.fsLim, g.fsTime);
         btn = "Restore My Settings";
     } else if (g.hwState == HWS_NT) {
         wsprintfA(t, "Motherboard sensors are off on Windows %s.\nWindows %s blocks programs from the sensor chip, so board temperatures and fan control are off. %s",
@@ -494,7 +495,7 @@ void ui_set_tab(int t)
 
 void ui_status(void)
 {
-    char a[200], b[120], c[64], t[24], kb[24];
+    char a[MAX_PATH + 80], b[120], c[64], t[24], kb[24];
     int i, warn = 0, src = tray_source();
     const char *file = g.log.path, *p;
     for (p = g.log.path; *p; p++) if (*p == '\\') file = p + 1;
@@ -517,7 +518,7 @@ void ui_status(void)
     if (src >= 0) wsprintfA(c, "%s %s", g.s[src].shortName, app_ft(t, g.s[src].val));
     else rt_cpy(c, "No temperature", sizeof(c));
     {
-        char old[200];
+        char old[MAX_PATH + 80];
         SendMessageA(g.status, SB_GETTEXTA, 0, (LPARAM)old);
         if (!rt_ieq(old, a)) SendMessageA(g.status, SB_SETTEXTA, 0, (LPARAM)a);
         SendMessageA(g.status, SB_GETTEXTA, 1, (LPARAM)old);
@@ -1439,10 +1440,11 @@ static INT_PTR CALLBACK page_proc(HWND d, UINT m, WPARAM wp, LPARAM lp)
         if ((HWND)lp == GetDlgItem(d, IDC_PCTBAR)) {
             Fan *f = &g.f[g.selFan];
             int v = (int)SendMessageA((HWND)lp, TBM_GETPOS, 0, 0);
-            if (LOWORD(wp) == TB_ENDTRACK || LOWORD(wp) == TB_THUMBPOSITION || LOWORD(wp) == TB_PAGEUP ||
-                LOWORD(wp) == TB_PAGEDOWN || LOWORD(wp) == TB_LINEUP || LOWORD(wp) == TB_LINEDOWN || LOWORD(wp) == TB_THUMBTRACK) {
+            WORD code = LOWORD(wp);
+            if (code == TB_ENDTRACK || code == TB_THUMBPOSITION || code == TB_PAGEUP ||
+                code == TB_PAGEDOWN || code == TB_LINEUP || code == TB_LINEDOWN || code == TB_THUMBTRACK) {
                 if (f->ctrl && v != f->pct) {
-                    if (LOWORD(wp) == TB_THUMBTRACK && v < g.o.floor) return TRUE;
+                    if ((code == TB_THUMBTRACK || code == TB_THUMBPOSITION) && v < g.o.floor) return TRUE;
                     set_manual_pct(f, v);
                     fans_refresh(0);
                 }
@@ -1463,9 +1465,16 @@ static INT_PTR CALLBACK alarm_proc(HWND d, UINT m, WPARAM wp, LPARAM lp)
     switch (m) {
     case WM_INITDIALOG: {
         char a[200], t1[24], t2[24];
-        Sensor *s = &g.s[g.alarmSensor];
         SendDlgItemMessageA(d, IDC_AICON, STM_SETICON, (WPARAM)LoadIcon(0, IDI_EXCLAMATION), 0);
-        wsprintfA(a, "%s is at %s, above its alarm limit of %s.", s->name, app_ft(t1, g.alarmTemp), app_ft(t2, s->limit));
+        if (g.alarmIsFan) {
+            Fan *f = &g.f[g.alarmSensor];
+            SetWindowTextA(d, APP_NAME " - Fan Speed Alarm");
+            wsprintfA(a, "%s is at %s RPM, below its alarm limit of %s RPM.",
+                      f->name, rt_fmtint(t1, (int)g.alarmTemp), rt_fmtint(t2, f->alarm));
+        } else {
+            Sensor *s = &g.s[g.alarmSensor];
+            wsprintfA(a, "%s is at %s, above its alarm limit of %s.", s->name, app_ft(t1, g.alarmTemp), app_ft(t2, s->limit));
+        }
         SetDlgItemTextA(d, IDC_ATEXT, a);
         if (g.fsActive) {
             SetDlgItemTextA(d, IDC_ATEXT2, "All controllable fans were set to full speed.");
@@ -1483,6 +1492,7 @@ static INT_PTR CALLBACK alarm_proc(HWND d, UINT m, WPARAM wp, LPARAM lp)
     case WM_COMMAND:
         if (LOWORD(wp) == IDC_ARESTORE) {
             if (g.fsActive) app_restore_prev();
+            else if (g.alarmIsFan) app_force_full_fan(g.alarmSensor);
             else app_force_full(g.alarmSensor);
         }
         if (LOWORD(wp) == IDOK || LOWORD(wp) == IDCANCEL || LOWORD(wp) == IDC_ARESTORE) {
@@ -1495,10 +1505,11 @@ static INT_PTR CALLBACK alarm_proc(HWND d, UINT m, WPARAM wp, LPARAM lp)
     return FALSE;
 }
 
-void ui_show_alarm(int sensor)
+void ui_show_alarm(int id, int isFan)
 {
     if (g.alarmDlg) return;
-    g.alarmSensor = sensor;
+    g.alarmSensor = id;
+    g.alarmIsFan = isFan;
     g.alarmDlg = CreateDialogParamA(g.inst, MAKEINTRESOURCEA(IDD_ALARM), g.main, alarm_proc, 0);
     if (g.alarmDlg) {
         ShowWindow(g.alarmDlg, SW_SHOW);

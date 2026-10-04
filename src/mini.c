@@ -28,9 +28,10 @@ static void paint_panel(HDC out, RECT *pr)
     HDC dc = CreateCompatibleDC(out);
     int W = pr->right - pr->left, H = pr->bottom - pr->top, y = 6, i;
     HBITMAP bmp = CreateCompatibleBitmap(out, W, H), ob = (HBITMAP)SelectObject(dc, bmp);
+    HFONT of = (HFONT)SelectObject(dc, g_mono);
     RECT r;
     char b[48], n[16];
-    HPEN pen;
+    HPEN pen, op;
     SetRect(&r, 0, 0, W, H);
     FillRect(dc, &r, (HBRUSH)GetStockObject(BLACK_BRUSH));
     SetBkMode(dc, TRANSPARENT);
@@ -58,9 +59,11 @@ static void paint_panel(HDC out, RECT *pr)
     }
     y += 4;
     pen = CreatePen(PS_SOLID, 1, RGB(96, 96, 96));
-    SelectObject(dc, pen);
+    op = (HPEN)SelectObject(dc, pen);
     MoveToEx(dc, 8, y, 0);
     LineTo(dc, W - 8, y);
+    SelectObject(dc, op);
+    DeleteObject(pen);
     y += 6;
     SelectObject(dc, g_mono);
     for (i = 0; i < NFAN; i++) {
@@ -77,9 +80,9 @@ static void paint_panel(HDC out, RECT *pr)
     }
     SetTextAlign(dc, TA_LEFT | TA_TOP);
     BitBlt(out, pr->left, pr->top, W, H, dc, 0, 0, SRCCOPY);
+    SelectObject(dc, of);
     SelectObject(dc, ob);
     DeleteObject(bmp);
-    DeleteObject(pen);
     DeleteDC(dc);
 }
 
