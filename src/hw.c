@@ -767,9 +767,11 @@ int hw_chip_read(HwInfo *hw, ChipReading *r)
                 r->rpmOk[i] = 1;
                 r->rpm[i] = (int)(1350000L / ((long)cnt * div));
             } else {
-                /* a fan found at start that reads nothing now has stopped */
+                /* a fan found at start that reads FFh is slower than the
+                   counter can measure with this divisor, or stopped */
                 r->rpmOk[i] = c->hasFan[i];
                 r->rpm[i] = 0;
+                if (cnt == 0xFF) r->rpmUnder[i] = (int)(1350000L / (255L * div));
             }
         }
         wb_bank(b, 0);
@@ -800,6 +802,7 @@ int hw_chip_read(HwInfo *hw, ChipReading *r)
             } else {
                 r->rpmOk[i] = c->hasFan[i];
                 r->rpm[i] = 0;
+                if (cnt == 0xFF) r->rpmUnder[i] = (int)(1350000L / (255L * divs[i]));
             }
         }
         r->vcore = mon_rd(b, 0x20) * 0.016;

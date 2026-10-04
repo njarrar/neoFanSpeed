@@ -3,7 +3,7 @@
 A small temperature and fan speed monitor for Windows 98, 98SE, ME, 2000
 and XP. One program file, `NEOFAN.EXE`, runs on all of them.
 
-Current version: **3.1**. See [Version history](#version-history).
+Current version: **3.2**. See [Version history](#version-history).
 
 ![Sensors tab](docs/sensors.png)
 
@@ -61,6 +61,13 @@ temperature 2) and "Motherboard" (temperature 1) may be swapped on some
 boards. Names can be changed in `NEOFAN.INI` (`[Sensor1]` to `[Sensor5]`,
 `[Fan1]` to `[Fan3]`, key `Name`).
 
+The chip counts fan speed with an 8 bit counter, so each fan has a slowest
+speed it can count, set by the BIOS (2,647 RPM with the common divisor of
+2). Below that the program shows, for example, "<2,647" and cannot tell a
+slow fan from a stopped one, so the low speed warning only trips when that
+slowest speed is at or under the warning limit. neoFanSpeed leaves the
+divisor as the BIOS set it.
+
 Fan control writes the chip's PWM duty register. The value the BIOS left
 there is saved first and put back on Auto (BIOS) and on exit, unless you
 untick "Return fans to BIOS control on exit".
@@ -117,6 +124,23 @@ logs with each version's settings. They cannot reach a real sensor chip, and
 the final check is a run on a real 98, ME, 2000 or XP machine.
 
 ## Version history
+
+### 3.2
+
+- A fan that turns too slowly for the sensor chip to count now shows as
+  "<2,647 rpm" (the slowest speed the chip can count) instead of 0 RPM.
+  In 3.1 a slow fan on Silent could read 0 RPM, set off the fan alarm and
+  jump to full speed. The alarm now trips only when that slowest countable
+  speed is at or under the warning limit, so it is sure the fan is too
+  slow. The CSV log writes these readings as `<2647`.
+- The alarm window keeps the reading of the alarm it shows when a second
+  alarm trips while it is open.
+- The tray icon is only redrawn when its number or color changes.
+- Hard disk temperature (S.M.A.R.T.) is read every 30 seconds instead of
+  every 5.
+- Tab and the arrow keys now move between the buttons in Mini View.
+- Log file names with long numbers (more than 9 digits) no longer
+  overflow when the log rolls to a new file.
 
 ### 3.1
 

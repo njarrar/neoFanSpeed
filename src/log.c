@@ -59,8 +59,8 @@ void log_line(char *out, int cap, int forDisplay)
     for (i = 0; i < NFAN; i++) {
         Fan *f = &g.f[i];
         if (f->avail && g.log.incF[i]) {
-            if (g.log.csv) wsprintfA(col, ",%d", f->rpm);
-            else wsprintfA(col, "  %s %drpm", f->shortName, f->rpm);
+            if (g.log.csv) wsprintfA(col, f->under ? ",<%d" : ",%d", f->under ? f->under : f->rpm);
+            else wsprintfA(col, f->under ? "  %s <%drpm" : "  %s %drpm", f->shortName, f->under ? f->under : f->rpm);
             rt_cat(out, col, cap);
         }
         if (f->ctrl && g.log.incD[i]) {
@@ -102,7 +102,8 @@ static int next_name(char *path)
         if (path[i] == '.') { dot = i; break; }
     end = dot;
     start = end;
-    while (start > 0 && path[start - 1] >= '0' && path[start - 1] <= '9') start--;
+    /* at most 9 digits, so the number fits in a long */
+    while (start > 0 && end - start < 9 && path[start - 1] >= '0' && path[start - 1] <= '9') start--;
     if (end - start < 1) return 0;
     num = 0;
     for (i = start; i < end; i++) num = num * 10 + (path[i] - '0');

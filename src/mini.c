@@ -72,8 +72,8 @@ static void paint_panel(HDC out, RECT *pr)
         SetTextAlign(dc, TA_LEFT | TA_TOP);
         TextOutA(dc, 8, y, f->shortName, rt_len(f->shortName));
         if (!f->avail) rt_cpy(b, "n/a", sizeof(b));
-        else if (f->ctrl && f->duty >= 0) wsprintfA(b, "%s rpm %3d%%", rt_fmtint(n, f->rpm), rt_round(f->duty));
-        else wsprintfA(b, "%s rpm", rt_fmtint(n, f->rpm));
+        else if (f->ctrl && f->duty >= 0) wsprintfA(b, "%s rpm %3d%%", app_frpm(n, f), rt_round(f->duty));
+        else wsprintfA(b, "%s rpm", app_frpm(n, f));
         SetTextAlign(dc, TA_RIGHT | TA_TOP);
         TextOutA(dc, W - 8, y, b, rt_len(b));
         y += 16;
