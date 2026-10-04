@@ -89,6 +89,23 @@ char *app_ft(char *buf, double c)
     return buf;
 }
 
+char *app_frpm(char *buf, const Fan *f)
+{
+    if (!f->under) return rt_fmtint(buf, f->rpm);
+    buf[0] = '<';
+    rt_fmtint(buf + 1, f->under);
+    return buf;
+}
+
+/* a fan too slow to count is only known to be low when the slowest speed
+   the chip can count is at or under the warning limit */
+int app_fan_low(const Fan *f)
+{
+    if (!f->avail || !f->alarmOn) return 0;
+    if (f->under) return f->under <= f->alarm;
+    return f->rpm < f->alarm;
+}
+
 double app_temp_of(int id)
 {
     if (id == S_HOT) {
@@ -258,7 +275,7 @@ static void trip(int id)
     char t[24], msg[200];
     if (fs) app_force_full(id);
     if (g.o.beep) MessageBeep(MB_ICONEXCLAMATION);
-    g.alarmTemp = s->val;
+    if (!g.alarmDlg) g.alarmTemp = s->val;
     if (g.o.warnWin) ui_show_alarm(id, 0);
     if (g.o.balloon && g.hw.os.hasBalloon) {
         wsprintfA(msg, "%s is at %s.%s", s->name, app_ft(t, s->val), fs ? " Fans set to full speed." : "");
@@ -273,10 +290,14 @@ static void trip_fan(int id)
     char r[24], r2[24], msg[200];
     if (fs) app_force_full_fan(id);
     if (g.o.beep) MessageBeep(MB_ICONEXCLAMATION);
-    g.alarmTemp = f->rpm;
+    if (!g.alarmDlg) {
+        g.alarmTemp = f->rpm;
+        g.alarmUnder = f->under;
+    }
     if (g.o.warnWin) ui_show_alarm(id, 1);
     if (g.o.balloon && g.hw.os.hasBalloon) {
-        wsprintfA(msg, "%s is at %s RPM (below %s RPM).%s", f->name, rt_fmtint(r, f->rpm), rt_fmtint(r2, f->alarm),
+        wsprintfA(msg, f->under ? "%s is below %s RPM (warning at %s RPM).%s" : "%s is at %s RPM (below %s RPM).%s",
+                  f->name, rt_fmtint(r, f->under ? f->under : f->rpm), rt_fmtint(r2, f->alarm),
                   fs ? " Fans set to full speed." : "");
         ui_balloon("Fan speed alarm", msg);
     }
@@ -326,7 +347,7 @@ void app_tick(int fromTimer)
     } else {
         push_sensor(S_GPU, 0, 0);
     }
-    if (g.hw.smartDrive >= 0 && (g.ticks % 5 == 1 || !hddOk || g.hw.demo)) {
+    if (g.hw.smartDrive >= 0 && (g.ticks % 30 == 1 || !hddOk || g.hw.demo)) {
         hddOk = hw_smart_temp(&g.hw, &hdd);
         if (hddOk) g.s[S_HDD].val = hdd;
     }
@@ -336,6 +357,7 @@ void app_tick(int fromTimer)
         Fan *f = &g.f[i];
         f->avail = got && g.hw.chip.hasFan[i] && r->rpmOk[i];
         f->rpm = f->avail ? r->rpm[i] : 0;
+        f->under = f->avail ? r->rpmUnder[i] : 0;
         if (f->rpm > f->maxRpm) f->maxRpm = f->rpm;
     }
     app_apply_hw();
@@ -363,8 +385,8 @@ void app_tick(int fromTimer)
         for (i = 0; i < NFAN; i++) {
             Fan *f = &g.f[i];
             if (!f->avail || !f->alarmOn) { f->alerted = 0; continue; }
-            if (f->rpm < f->alarm && !f->alerted) { f->alerted = 1; trip_fan(i); }
-            if (f->rpm > f->alarm + 100) f->alerted = 0;
+            if (app_fan_low(f) && !f->alerted) { f->alerted = 1; trip_fan(i); }
+            if (!f->under && f->rpm > f->alarm + 100) f->alerted = 0;
         }
     }
     if (fromTimer) log_tick();

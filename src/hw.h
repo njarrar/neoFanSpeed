@@ -58,6 +58,7 @@ typedef struct {
     int tempOk[NTEMP_CHIP];
     int rpm[NFAN_CHIP];
     int rpmOk[NFAN_CHIP];
+    int rpmUnder[NFAN_CHIP];/* counter full: speed is below this RPM */
     double vcore, v33, v5, v12;
     int voltOk;
 } ChipReading;

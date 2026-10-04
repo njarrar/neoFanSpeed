@@ -7,7 +7,7 @@
 #include "hw.h"
 
 #define APP_NAME   "neoFanSpeed"
-#define APP_VER    "3.1"
+#define APP_VER    "3.2"
 
 #define NSENS 5
 #define NFAN  3
@@ -52,6 +52,7 @@ typedef struct {
     int allowBelow;         /* manual duty allowed under floor, -1 none */
     double hT;              /* held temperature for hysteresis */
     int rpm;
+    int under;              /* >0: too slow to count, speed is below this */
     int target;             /* expected RPM for the duty */
     int maxRpm;             /* highest RPM seen, for the target guess */
     double duty;
@@ -123,6 +124,7 @@ typedef struct {
     int alarmSensor;
     int alarmIsFan;
     double alarmTemp;
+    int alarmUnder;
 
     int trayAdded;
     UINT taskbarMsg;
@@ -147,7 +149,9 @@ void app_force_full(int sensor);
 void app_force_full_fan(int fan);
 void app_reset_stats(void);
 double app_cv(double c);
-char *app_ft(char *buf, double c);   /* "54.2 °C" */
+char *app_ft(char *buf, double c);
+char *app_frpm(char *buf, const Fan *f);   /* "1,234" or "<2,657" */
+int  app_fan_low(const Fan *f);           /* warning on and known to be under its limit */   /* "54.2 °C" */
 void app_load_settings(void);
 void app_save_settings(void);
 int  app_count_ctrl(void);

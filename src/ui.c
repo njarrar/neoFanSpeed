@@ -231,7 +231,27 @@ static int tray_source(void)
     return -1;
 }
 
-static HICON make_tray_icon(void)
+static int g_lastTrayVal = -99999;
+static COLORREF g_lastTrayBg = 0xFFFFFFFF;
+static char g_lastTrayTip[128];
+
+static void tray_calc_state(int *outVal, COLORREF *outBg, char *s, int cap)
+{
+    int src = tray_source();
+    if (src >= 0) {
+        double t = g.s[src].val, lim = g.s[src].limit;
+        int v = rt_round(app_cv(t));
+        *outVal = v;
+        *outBg = t < lim - 10 ? RGB(0, 112, 0) : t < lim ? RGB(176, 112, 0) : RGB(192, 0, 0);
+        wsprintfA(s, "%d", v);
+    } else {
+        *outVal = -9999;
+        *outBg = RGB(128, 128, 128);
+        rt_cpy(s, "--", cap);
+    }
+}
+
+static HICON make_tray_icon(const char *s, COLORREF bg)
 {
     HDC sdc = GetDC(0), dc = CreateCompatibleDC(sdc);
     HBITMAP col = CreateCompatibleBitmap(sdc, 16, 16), mask = CreateBitmap(16, 16, 1, 1, 0), ob;
@@ -240,16 +260,6 @@ static HICON make_tray_icon(void)
     HICON ic;
     RECT r;
     HBRUSH br;
-    char s[8];
-    int src = tray_source();
-    COLORREF bg = RGB(128, 128, 128);
-    if (src >= 0) {
-        double t = g.s[src].val, lim = g.s[src].limit;
-        bg = t < lim - 10 ? RGB(0, 112, 0) : t < lim ? RGB(176, 112, 0) : RGB(192, 0, 0);
-        wsprintfA(s, "%d", rt_round(app_cv(t)));
-    } else {
-        rt_cpy(s, "--", sizeof(s));
-    }
     ob = (HBITMAP)SelectObject(dc, mask);
     SetRect(&r, 0, 0, 16, 16);
     FillRect(dc, &r, (HBRUSH)GetStockObject(BLACK_BRUSH));
@@ -290,7 +300,7 @@ static void tray_tip(char *out, int cap)
     }
     for (i = 0; i < NFAN; i++) {
         if (!g.f[i].avail) continue;
-        wsprintfA(b, "%sFan %s rpm", out[0] ? "  " : "", rt_fmtint(a, g.f[i].rpm));
+        wsprintfA(b, "%sFan %s rpm", out[0] ? "  " : "", app_frpm(a, &g.f[i]));
         rt_cat(out, b, cap);
         break;
     }
@@ -300,16 +310,31 @@ static void tray_tip(char *out, int cap)
 static void tray_send(DWORD msg, const char *title, const char *info)
 {
     NFS_NID n;
-    HICON old = g_trayIcon;
+    HICON old = 0;
+    char s[8];
+    int val = 0;
+    COLORREF bg = 0;
+    int needIcon;
     ZERO(n);
     n.cbSize = g.hw.os.hasBalloon ? sizeof(n) : NID_OLD_SIZE;
     n.hWnd = g.main;
     n.uID = TRAY_ID;
     n.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
     n.uCallbackMessage = WM_TRAY;
-    g_trayIcon = make_tray_icon();
-    n.hIcon = g_trayIcon;
+    tray_calc_state(&val, &bg, s, sizeof(s));
     tray_tip(n.szTip, g.hw.os.hasBalloon ? 128 : 64);
+    needIcon = !g_trayIcon || val != g_lastTrayVal || bg != g_lastTrayBg;
+    if (msg == NIM_MODIFY && g.trayAdded && !title && !needIcon &&
+        rt_len(n.szTip) == rt_len(g_lastTrayTip) && rt_ieq(n.szTip, g_lastTrayTip))
+        return;
+    if (needIcon) {
+        old = g_trayIcon;
+        g_trayIcon = make_tray_icon(s, bg);
+        g_lastTrayVal = val;
+        g_lastTrayBg = bg;
+    }
+    rt_cpy(g_lastTrayTip, n.szTip, sizeof(g_lastTrayTip));
+    n.hIcon = g_trayIcon;
     if (title && g.hw.os.hasBalloon) {
         n.uFlags |= NFS_NIF_INFO;
         rt_cpy(n.szInfoTitle, title, sizeof(n.szInfoTitle));
@@ -338,13 +363,19 @@ void ui_balloon(const char *title, const char *text)
 static void tray_remove(void)
 {
     NFS_NID n;
-    if (!g.trayAdded) return;
-    ZERO(n);
-    n.cbSize = NID_OLD_SIZE;
-    n.hWnd = g.main;
-    n.uID = TRAY_ID;
-    Shell_NotifyIconA(NIM_DELETE, (NOTIFYICONDATAA *)&n);
-    g.trayAdded = 0;
+    if (g.trayAdded) {
+        ZERO(n);
+        n.cbSize = NID_OLD_SIZE;
+        n.hWnd = g.main;
+        n.uID = TRAY_ID;
+        Shell_NotifyIconA(NIM_DELETE, (NOTIFYICONDATAA *)&n);
+        g.trayAdded = 0;
+    }
+    if (g_trayIcon) {
+        DestroyIcon(g_trayIcon);
+        g_trayIcon = 0;
+    }
+    g_lastTrayVal = -99999;
 }
 
 static void tray_menu(void)
@@ -506,7 +537,7 @@ void ui_status(void)
     for (i = 0; i < NSENS && !b[0]; i++)
         if (g.s[i].avail && g.s[i].val > g.s[i].limit) { wsprintfA(b, "%s over limit", g.s[i].name); warn = 1; }
     for (i = 0; i < NFAN && !b[0]; i++)
-        if (g.f[i].avail && g.f[i].alarmOn && g.f[i].rpm < g.f[i].alarm) { wsprintfA(b, "%s below %d RPM", g.f[i].name, g.f[i].alarm); warn = 1; }
+        if (app_fan_low(&g.f[i])) { wsprintfA(b, "%s below %d RPM", g.f[i].name, g.f[i].alarm); warn = 1; }
     if (!b[0]) {
         if (g.hwState == HWS_NT) wsprintfA(b, "Limited: Windows %s", g.hw.os.shortName);
         else if (g.hwState == HWS_NOCHIP) rt_cpy(b, "Limited: no sensor chip", sizeof(b));
@@ -595,7 +626,7 @@ static LRESULT list_customdraw(NMLVCUSTOMDRAW *cd, int isFans)
         if (isFans) {
             if (i >= NFAN) return CDRF_DODEFAULT;
             avail = g.f[i].avail;
-            over = g.f[i].avail && g.f[i].alarmOn && g.f[i].rpm < g.f[i].alarm;
+            over = app_fan_low(&g.f[i]);
             boldCol = 2;
         } else {
             if (i >= NSENS) return CDRF_DODEFAULT;
@@ -685,7 +716,7 @@ static void fans_refresh(int full)
         Fan *x = &g.f[i];
         lv_text(lv, i, 0, x->name);
         lv_text(lv, i, 1, x->header);
-        if (x->avail) { wsprintfA(b, "%s RPM", rt_fmtint(n1, x->rpm)); lv_text(lv, i, 2, b); }
+        if (x->avail) { wsprintfA(b, "%s RPM", app_frpm(n1, x)); lv_text(lv, i, 2, b); }
         else lv_text(lv, i, 2, "n/a");
         if (x->ctrl && x->duty >= 0) { wsprintfA(b, "%d %%", rt_round(x->duty)); lv_text(lv, i, 3, b); }
         else lv_text(lv, i, 3, x->ctrl ? "BIOS" : "-");
@@ -749,7 +780,7 @@ static void fans_refresh(int full)
     }
 
     /* reading box */
-    set_text(GetDlgItem(d, IDC_LED), f->avail ? rt_fmtint(b, f->rpm) : "----");
+    set_text(GetDlgItem(d, IDC_LED), f->avail ? app_frpm(b, f) : "----");
     {
         int fol = f->follows == S_HOT ? S_CPU : f->follows;
         if (g.s[fol].avail || f->follows == S_HOT)
@@ -765,6 +796,7 @@ static void fans_refresh(int full)
     } else if (ctrl) set_text(GetDlgItem(d, IDC_RTARGET), "Set by the BIOS");
     else set_text(GetDlgItem(d, IDC_RTARGET), "Fixed speed, read only");
     if (!f->avail) set_text(GetDlgItem(d, IDC_RSTATE), "");
+    else if (f->under) set_text(GetDlgItem(d, IDC_RSTATE), "Too slow to count, or stopped");
     else if (ctrl && f->duty >= 0 && f->target > 0 && rt_fabs((double)f->rpm - f->target) > f->target * 0.06)
         set_text(GetDlgItem(d, IDC_RSTATE), "Settling...");
     else set_text(GetDlgItem(d, IDC_RSTATE), "Steady");
@@ -1056,7 +1088,7 @@ void ui_build_report(char *out, int cap)
         rt_cat(out, b, cap);
     }
     for (i = 0; i < NFAN; i++) {
-        if (g.f[i].avail) wsprintfA(b, "%s: %s RPM\r\n", g.f[i].name, rt_fmtint(t, g.f[i].rpm));
+        if (g.f[i].avail) wsprintfA(b, "%s: %s RPM\r\n", g.f[i].name, app_frpm(t, &g.f[i]));
         else wsprintfA(b, "%s: n/a\r\n", g.f[i].name);
         rt_cat(out, b, cap);
     }
@@ -1469,8 +1501,12 @@ static INT_PTR CALLBACK alarm_proc(HWND d, UINT m, WPARAM wp, LPARAM lp)
         if (g.alarmIsFan) {
             Fan *f = &g.f[g.alarmSensor];
             SetWindowTextA(d, APP_NAME " - Fan Speed Alarm");
-            wsprintfA(a, "%s is at %s RPM, below its alarm limit of %s RPM.",
-                      f->name, rt_fmtint(t1, (int)g.alarmTemp), rt_fmtint(t2, f->alarm));
+            if (g.alarmUnder)
+                wsprintfA(a, "%s is below %s RPM, too slow to count. It may have stopped.",
+                          f->name, rt_fmtint(t1, g.alarmUnder));
+            else
+                wsprintfA(a, "%s is at %s RPM, below its alarm limit of %s RPM.",
+                          f->name, rt_fmtint(t1, (int)g.alarmTemp), rt_fmtint(t2, f->alarm));
         } else {
             Sensor *s = &g.s[g.alarmSensor];
             wsprintfA(a, "%s is at %s, above its alarm limit of %s.", s->name, app_ft(t1, g.alarmTemp), app_ft(t2, s->limit));
@@ -1697,6 +1733,7 @@ static LRESULT CALLBACK main_proc(HWND w, UINT m, WPARAM wp, LPARAM lp)
 {
     if (m == g.taskbarMsg && g.taskbarMsg) {
         g.trayAdded = 0;
+        g_lastTrayVal = -99999;
         ui_tray_update();
         return 0;
     }
@@ -1915,6 +1952,7 @@ int nfs_main(void)
         if (g.alarmDlg && IsDialogMessageA(g.alarmDlg, &msg)) continue;
         if (msg.hwnd == g.main || IsChild(g.main, msg.hwnd))
             if (TranslateAcceleratorA(g.main, g.accel, &msg)) continue;
+        if (g.mini && IsWindowVisible(g.mini) && IsDialogMessageA(g.mini, &msg)) continue;
         if (g.page[g.curTab] && IsDialogMessageA(g.page[g.curTab], &msg)) continue;
         TranslateMessage(&msg);
         DispatchMessageA(&msg);
