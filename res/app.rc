@@ -1,0 +1,257 @@
+/* neoFanSpeed resources */
+#include <windows.h>
+#include <commctrl.h>
+#include "../src/resource.h"
+
+#ifndef DS_SHELLFONT
+#define DS_SHELLFONT (DS_SETFONT | DS_FIXEDSYS)
+#endif
+
+IDI_APP ICON "app.ico"
+
+1 24 "app.manifest"
+
+1 VERSIONINFO
+FILEVERSION 3,0,0,0
+PRODUCTVERSION 3,0,0,0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904E4"
+    BEGIN
+      VALUE "CompanyName", "njarrar"
+      VALUE "FileDescription", "neoFanSpeed temperature and fan monitor"
+      VALUE "FileVersion", "3.0.0"
+      VALUE "InternalName", "NEOFAN"
+      VALUE "OriginalFilename", "NEOFAN.EXE"
+      VALUE "ProductName", "neoFanSpeed"
+      VALUE "ProductVersion", "3.0.0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1252
+  END
+END
+
+IDR_MENU MENU
+BEGIN
+  POPUP "&File"
+  BEGIN
+    MENUITEM "S&tart Logging\tAlt+T",   IDM_LOGTOGGLE
+    MENUITEM "&Reset Min/Max\tAlt+R",   IDM_RESET
+    MENUITEM SEPARATOR
+    MENUITEM "&Close to Tray",          IDM_TRAY
+    MENUITEM "E&xit",                   IDM_EXIT
+  END
+  POPUP "&View"
+  BEGIN
+    MENUITEM "&Celsius",                IDM_CELSIUS
+    MENUITEM "&Fahrenheit",             IDM_FAHRENHEIT
+    MENUITEM SEPARATOR
+    MENUITEM "Always on &Top",          IDM_ONTOP
+    MENUITEM "&Mini View",              IDM_MINI
+  END
+  POPUP "&Help"
+  BEGIN
+    MENUITEM "&Detect Hardware...",     IDM_DETECT
+    MENUITEM SEPARATOR
+    MENUITEM "&About neoFanSpeed",      IDM_ABOUT
+  END
+END
+
+IDR_ACCEL ACCELERATORS
+BEGIN
+  "T", IDM_LOGTOGGLE, VIRTKEY, ALT
+  "R", IDM_RESET, VIRTKEY, ALT
+  "S", IDM_TAB_SENSORS, VIRTKEY, ALT
+  "A", IDM_TAB_FANS, VIRTKEY, ALT
+  "L", IDM_TAB_LOGGING, VIRTKEY, ALT
+  "I", IDM_TAB_INFO, VIRTKEY, ALT
+END
+
+IDD_SENSORS DIALOGEX 0, 0, 460, 250
+STYLE DS_CONTROL | DS_SHELLFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "", IDC_SLIST, "SysListView32", LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, 4, 4, 452, 84
+    LTEXT           "Alarm limit for CPU:", IDC_ALARMLBL, 4, 96, 112, 8, SS_RIGHT
+    EDITTEXT        IDC_LIMIT, 120, 94, 40, 12, ES_READONLY | ES_RIGHT
+    CONTROL         "", IDC_LIMITSPIN, "msctls_updown32", UDS_ARROWKEYS, 160, 94, 9, 12
+    CONTROL         "", IDC_SEP1, "Static", SS_ETCHEDVERT, 176, 92, 1, 16
+    LTEXT           "When passed:", IDC_STATIC, 182, 96, 50, 8
+    AUTOCHECKBOX    "&Warning window", IDC_WARNWIN, 234, 95, 70, 10
+    AUTOCHECKBOX    "&Beep", IDC_BEEP, 306, 95, 34, 10
+    AUTOCHECKBOX    "Tray balloon (ME, 2000, XP)", IDC_BALLOON, 342, 95, 114, 10
+    GROUPBOX        "Temperature history", IDC_STATIC, 4, 112, 452, 134
+    CONTROL         "", IDC_GRAPH, "NFSGraph", WS_CHILD | WS_VISIBLE, 10, 124, 440, 116
+END
+
+IDD_FANS DIALOGEX 0, 0, 460, 250
+STYLE DS_CONTROL | DS_SHELLFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "", IDC_FLIST, "SysListView32", LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, 4, 4, 452, 66
+    GROUPBOX        "Speed control", IDC_CTLGRP, 4, 74, 300, 126
+    AUTORADIOBUTTON "Auto (BIOS)", IDC_MAUTO, 12, 86, 52, 10, WS_GROUP | WS_TABSTOP
+    AUTORADIOBUTTON "Manual", IDC_MMANUAL, 68, 86, 40, 10
+    AUTORADIOBUTTON "Profile", IDC_MPROFILE, 112, 86, 40, 10
+    AUTORADIOBUTTON "Curve", IDC_MCURVE, 156, 86, 40, 10
+    CONTROL         "", IDC_MSEP, "Static", SS_ETCHEDHORZ, 12, 100, 284, 1
+
+    LTEXT           "Fixed duty cycle. Lower is quieter but runs warmer.", IDC_MANTXT, 12, 106, 284, 8
+    PUSHBUTTON      "-", IDC_PCTDN, 12, 120, 14, 13
+    CONTROL         "", IDC_PCTBAR, "msctls_trackbar32", TBS_HORZ | TBS_NOTICKS | WS_TABSTOP, 28, 118, 200, 18
+    PUSHBUTTON      "+", IDC_PCTUP, 230, 120, 14, 13
+    EDITTEXT        IDC_PCTVAL, 250, 120, 40, 13, ES_READONLY | ES_RIGHT
+    LTEXT           "20 %", IDC_PL20, 26, 138, 30, 8
+    CTEXT           "60 %", IDC_PL60, 112, 138, 30, 8
+    RTEXT           "100 %", IDC_PL100, 200, 138, 30, 8
+
+    AUTORADIOBUTTON "Silent", IDC_PSILENT, 12, 108, 50, 10, WS_GROUP | WS_TABSTOP
+    AUTORADIOBUTTON "Normal", IDC_PNORMAL, 12, 122, 50, 10
+    AUTORADIOBUTTON "Full speed", IDC_PFULL, 12, 136, 50, 10
+    LTEXT           "40 %", IDC_PS1, 70, 109, 30, 8
+    LTEXT           "65 %", IDC_PS2, 70, 123, 30, 8
+    LTEXT           "100 %", IDC_PS3, 70, 137, 30, 8
+    LTEXT           "Quietest, runs warmer", IDC_PN1, 104, 109, 120, 8
+    LTEXT           "Balanced", IDC_PN2, 104, 123, 120, 8
+    LTEXT           "Coolest, loudest", IDC_PN3, 104, 137, 120, 8
+    AUTOCHECKBOX    "Apply to all controllable fans", IDC_PALL, 12, 156, 150, 10, WS_GROUP | WS_TABSTOP
+
+    LTEXT           "Follows:", IDC_FOLLOWLBL, 12, 108, 28, 8
+    COMBOBOX        IDC_FOLLOW, 42, 106, 84, 90, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "", IDC_FOLLOWT, 130, 108, 96, 8
+    LTEXT           "Hysteresis:", IDC_HYSTLBL, 228, 108, 38, 8
+    EDITTEXT        IDC_HYST, 266, 106, 26, 12, ES_READONLY | ES_RIGHT
+    CONTROL         "", IDC_HYSTSPIN, "msctls_updown32", UDS_ARROWKEYS, 292, 106, 9, 12
+    CONTROL         "", IDC_CURVE, "NFSCurve", WS_CHILD | WS_VISIBLE, 12, 122, 110, 62
+    LTEXT           "20 C", IDC_CMIN, 12, 186, 40, 8
+    RTEXT           "80 C", IDC_CMAX, 82, 186, 40, 8
+    CTEXT           "Temperature", IDC_CTHDR, 154, 121, 44, 8
+    CTEXT           "Fan duty", IDC_CDHDR, 200, 121, 44, 8
+    LTEXT           "Point 1", 1340, 128, 132, 28, 8
+    EDITTEXT        1344, 158, 130, 30, 12, ES_READONLY | ES_RIGHT
+    CONTROL         "", 1348, "msctls_updown32", UDS_ARROWKEYS, 188, 130, 9, 12
+    EDITTEXT        1352, 202, 130, 30, 12, ES_READONLY | ES_RIGHT
+    CONTROL         "", 1356, "msctls_updown32", UDS_ARROWKEYS, 232, 130, 9, 12
+    LTEXT           "Point 2", 1341, 128, 146, 28, 8
+    EDITTEXT        1345, 158, 144, 30, 12, ES_READONLY | ES_RIGHT
+    CONTROL         "", 1349, "msctls_updown32", UDS_ARROWKEYS, 188, 144, 9, 12
+    EDITTEXT        1353, 202, 144, 30, 12, ES_READONLY | ES_RIGHT
+    CONTROL         "", 1357, "msctls_updown32", UDS_ARROWKEYS, 232, 144, 9, 12
+    LTEXT           "Point 3", 1342, 128, 160, 28, 8
+    EDITTEXT        1346, 158, 158, 30, 12, ES_READONLY | ES_RIGHT
+    CONTROL         "", 1350, "msctls_updown32", UDS_ARROWKEYS, 188, 158, 9, 12
+    EDITTEXT        1354, 202, 158, 30, 12, ES_READONLY | ES_RIGHT
+    CONTROL         "", 1358, "msctls_updown32", UDS_ARROWKEYS, 232, 158, 9, 12
+    LTEXT           "Point 4", 1343, 128, 174, 28, 8
+    EDITTEXT        1347, 158, 172, 30, 12, ES_READONLY | ES_RIGHT
+    CONTROL         "", 1351, "msctls_updown32", UDS_ARROWKEYS, 188, 172, 9, 12
+    EDITTEXT        1355, 202, 172, 30, 12, ES_READONLY | ES_RIGHT
+    CONTROL         "", 1359, "msctls_updown32", UDS_ARROWKEYS, 232, 172, 9, 12
+    LTEXT           "The motherboard BIOS controls this fan with its own settings. neoFanSpeed only reads the speed. Pick Manual, Profile or Curve to take over.", IDC_AUTOTXT, 12, 106, 284, 30
+
+    ICON            "", IDC_NCICON, 12, 108, 20, 20
+    LTEXT           "This fan cannot be controlled.", IDC_NCTITLE, 40, 108, 250, 8
+    LTEXT           "", IDC_NCREASON, 40, 122, 250, 40
+
+    GROUPBOX        "Reading", IDC_STATIC, 310, 74, 146, 126
+    CONTROL         "", IDC_LED, "NFSLed", WS_CHILD | WS_VISIBLE, 318, 86, 130, 24
+    LTEXT           "", IDC_RSENSOR, 318, 116, 132, 8
+    LTEXT           "", IDC_RTARGET, 318, 128, 132, 8
+    LTEXT           "", IDC_RSTATE, 318, 140, 132, 8
+    CONTROL         "", IDC_STATIC, "Static", SS_ETCHEDHORZ, 318, 154, 130, 1
+    AUTOCHECKBOX    "Warn below", IDC_WARNLOW, 318, 163, 50, 10, WS_TABSTOP
+    EDITTEXT        IDC_WARNRPM, 370, 162, 34, 12, ES_READONLY | ES_RIGHT
+    CONTROL         "", IDC_WARNSPIN, "msctls_updown32", UDS_ARROWKEYS, 404, 162, 9, 12
+    LTEXT           "RPM", IDC_WARNUNIT, 418, 164, 20, 8
+
+    GROUPBOX        "Fan safety (all fans)", IDC_STATIC, 4, 204, 452, 30
+    AUTOCHECKBOX    "Return fans to BIOS control on exit", IDC_BIOSEXIT, 12, 217, 136, 10, WS_TABSTOP
+    AUTOCHECKBOX    "Full speed when any alarm trips", IDC_FAILSAFE, 156, 217, 124, 10, WS_TABSTOP
+    LTEXT           "Lowest duty:", IDC_STATIC, 352, 218, 44, 8
+    EDITTEXT        IDC_FLOOR, 398, 216, 34, 12, ES_READONLY | ES_RIGHT
+    CONTROL         "", IDC_FLOORSPIN, "msctls_updown32", UDS_ARROWKEYS, 432, 216, 9, 12
+END
+
+IDD_LOGGING DIALOGEX 0, 0, 460, 250
+STYLE DS_CONTROL | DS_SHELLFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    GROUPBOX        "Log file", IDC_STATIC, 4, 4, 284, 96
+    LTEXT           "File name:", IDC_STATIC, 12, 20, 40, 8
+    EDITTEXT        IDC_LOGPATH, 54, 18, 160, 12, ES_AUTOHSCROLL
+    PUSHBUTTON      "B&rowse...", IDC_BROWSE, 220, 17, 60, 14
+    LTEXT           "Format:", IDC_STATIC, 12, 36, 40, 8
+    AUTORADIOBUTTON "CSV (comma separated)", IDC_FCSV, 54, 35, 96, 10, WS_GROUP | WS_TABSTOP
+    AUTORADIOBUTTON "Plain text", IDC_FTXT, 154, 35, 60, 10
+    LTEXT           "Write a line every", IDC_STATIC, 12, 52, 62, 8
+    EDITTEXT        IDC_LOGINT, 76, 50, 24, 12, ES_READONLY | ES_RIGHT | WS_GROUP
+    CONTROL         "", IDC_LOGINTSPIN, "msctls_updown32", UDS_ARROWKEYS, 100, 50, 9, 12
+    LTEXT           "seconds", IDC_STATIC, 114, 52, 40, 8
+    LTEXT           "Example line:", IDC_STATIC, 12, 68, 60, 8
+    EDITTEXT        IDC_EXAMPLE, 12, 80, 268, 12, ES_READONLY | ES_AUTOHSCROLL
+
+    GROUPBOX        "Options", IDC_STATIC, 4, 104, 284, 50
+    AUTOCHECKBOX    "Write column names on the first line (CSV)", IDC_LHEADER, 12, 116, 200, 10, WS_TABSTOP
+    AUTOCHECKBOX    "Start a new file when this one reaches 1 MB", IDC_LROLL, 12, 128, 200, 10, WS_TABSTOP
+    AUTOCHECKBOX    "Start logging when neoFanSpeed starts", IDC_LSTART, 12, 140, 200, 10, WS_TABSTOP
+
+    GROUPBOX        "Values to record", IDC_STATIC, 294, 4, 162, 150
+    CONTROL         "", IDC_LVALS, "SysListView32", LVS_REPORT | LVS_NOCOLUMNHEADER | LVS_SINGLESEL | WS_TABSTOP, 300, 16, 150, 132
+
+    GROUPBOX        "Recent entries", IDC_STATIC, 4, 158, 452, 88
+    LISTBOX         IDC_LRECENT, 12, 170, 436, 50, LBS_NOINTEGRALHEIGHT | LBS_NOSEL | WS_VSCROLL | WS_HSCROLL | WS_BORDER
+    LTEXT           "Not recording.", IDC_LSUM, 12, 230, 300, 8
+    PUSHBUTTON      "Start Logging", IDC_LBTN, 376, 226, 72, 15, WS_TABSTOP
+END
+
+IDD_INFO DIALOGEX 0, 0, 460, 250
+STYLE DS_CONTROL | DS_SHELLFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    GROUPBOX        "Processor", IDC_GPROC, 4, 4, 224, 108
+    GROUPBOX        "Graphics", IDC_GGFX, 232, 4, 224, 108
+    GROUPBOX        "Motherboard", IDC_GBOARD, 4, 116, 224, 108
+    GROUPBOX        "System", IDC_GSYS, 232, 116, 224, 108
+    LTEXT           "", IDC_IMSG, 4, 232, 190, 8
+    PUSHBUTTON      "&Detect Hardware...", IDC_IDETECT, 200, 228, 80, 15
+    PUSHBUTTON      "&Copy to Clipboard", IDC_ICOPY, 286, 228, 80, 15
+    PUSHBUTTON      "Sa&ve Report...", IDC_ISAVE, 372, 228, 84, 15
+END
+
+IDD_ALARM DIALOGEX 0, 0, 240, 66
+STYLE DS_MODALFRAME | DS_SHELLFONT | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "neoFanSpeed - Temperature Alarm"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    ICON            "", IDC_AICON, 10, 10, 20, 20
+    LTEXT           "", IDC_ATEXT, 40, 10, 192, 16
+    LTEXT           "", IDC_ATEXT2, 40, 28, 192, 8
+    DEFPUSHBUTTON   "OK", IDOK, 64, 44, 50, 15
+    PUSHBUTTON      "Restore My Settings", IDC_ARESTORE, 120, 44, 80, 15
+END
+
+IDD_DETECT DIALOGEX 0, 0, 270, 136
+STYLE DS_MODALFRAME | DS_SHELLFONT | DS_CENTER | WS_POPUP | WS_CAPTION
+CAPTION "neoFanSpeed - Detecting Hardware"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Checking which sensors and fans this computer has. This takes a few seconds.", IDC_DTEXT, 10, 8, 250, 16
+    CONTROL         "", IDC_DBOX, "Static", SS_WHITERECT | SS_SUNKEN, 10, 28, 250, 62
+    LTEXT           "", 1801, 14, 32, 120, 8
+    LTEXT           "", 1802, 14, 43, 120, 8
+    LTEXT           "", 1803, 14, 54, 120, 8
+    LTEXT           "", 1804, 14, 65, 120, 8
+    LTEXT           "", 1805, 14, 76, 120, 8
+    RTEXT           "", 1811, 134, 32, 122, 8
+    RTEXT           "", 1812, 134, 43, 122, 8
+    RTEXT           "", 1813, 134, 54, 122, 8
+    RTEXT           "", 1814, 134, 65, 122, 8
+    RTEXT           "", 1815, 134, 76, 122, 8
+    CONTROL         "", IDC_DPROG, "msctls_progress32", WS_BORDER, 10, 96, 250, 10
+    DEFPUSHBUTTON   "Continue", IDOK, 110, 114, 50, 15
+END
