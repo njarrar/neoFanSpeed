@@ -602,7 +602,7 @@ static void sio_ite(WORD idx, ChipInfo *c)
     outb(idx, idx == 0x2E ? 0x55 : 0xAA);
     outb(idx, 0x20); a = inb((WORD)(idx + 1));
     outb(idx, 0x21); b = inb((WORD)(idx + 1));
-    if (a == 0x87 && (b == 0x05 || b == 0x12 || b == 0x16 || b == 0x18)) {
+    if (a == 0x87 && b != 0xFF && b != 0x00) {
         BYTE hi, lo;
         c->devId = (a << 8) | b;
         outb(idx, 0x07); outb((WORD)(idx + 1), 0x04);       /* environment controller */
@@ -687,8 +687,8 @@ void hw_chip_detect(HwInfo *hw)
         if (c->devId == 0x52 || c->devId == 0x60) {
             c->canControl = 1;
             c->fanCtl[0] = c->fanCtl[1] = 1;
-            c->pwmReg[0] = 0x5A;
-            c->pwmReg[1] = 0x5B;
+            c->pwmReg[0] = c->devId == 0x60 ? 0x01 : 0x5A;
+            c->pwmReg[1] = c->devId == 0x60 ? 0x03 : 0x5B;
         }
     } else if (c->kind == CHIP_ITE) {
         /* IT8716F and IT8718F may count fans in 16 bit mode; not handled */
@@ -763,8 +763,14 @@ int hw_chip_read(HwInfo *hw, ChipReading *r)
             BYTE cnt;
             wb_bank(b, 0);
             cnt = mon_rd(b, (BYTE)(0x28 + i));
-            r->rpmOk[i] = cnt != 0xFF && cnt != 0;
-            r->rpm[i] = r->rpmOk[i] ? (int)(1350000L / ((long)cnt * div)) : 0;
+            if (cnt != 0xFF && cnt != 0) {
+                r->rpmOk[i] = 1;
+                r->rpm[i] = (int)(1350000L / ((long)cnt * div));
+            } else {
+                /* a fan found at start that reads nothing now has stopped */
+                r->rpmOk[i] = c->hasFan[i];
+                r->rpm[i] = 0;
+            }
         }
         wb_bank(b, 0);
         r->vcore = mon_rd(b, 0x20) * 0.016;
@@ -788,8 +794,13 @@ int hw_chip_read(HwInfo *hw, ChipReading *r)
         }
         for (i = 0; i < 3; i++) {
             BYTE cnt = mon_rd(b, (BYTE)(0x0D + i));
-            r->rpmOk[i] = cnt != 0xFF && cnt != 0;
-            r->rpm[i] = r->rpmOk[i] ? (int)(1350000L / ((long)cnt * divs[i])) : 0;
+            if (cnt != 0xFF && cnt != 0) {
+                r->rpmOk[i] = 1;
+                r->rpm[i] = (int)(1350000L / ((long)cnt * divs[i]));
+            } else {
+                r->rpmOk[i] = c->hasFan[i];
+                r->rpm[i] = 0;
+            }
         }
         r->vcore = mon_rd(b, 0x20) * 0.016;
         r->v33 = mon_rd(b, 0x22) * 0.016;
