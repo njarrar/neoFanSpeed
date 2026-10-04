@@ -12,8 +12,8 @@ IDI_APP ICON "app.ico"
 1 24 "app.manifest"
 
 1 VERSIONINFO
-FILEVERSION 3,0,0,0
-PRODUCTVERSION 3,0,0,0
+FILEVERSION 3,1,0,0
+PRODUCTVERSION 3,1,0,0
 FILEOS VOS_NT_WINDOWS32
 FILETYPE VFT_APP
 BEGIN
@@ -23,11 +23,11 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "njarrar"
       VALUE "FileDescription", "neoFanSpeed temperature and fan monitor"
-      VALUE "FileVersion", "3.0.0"
+      VALUE "FileVersion", "3.1.0"
       VALUE "InternalName", "NEOFAN"
       VALUE "OriginalFilename", "NEOFAN.EXE"
       VALUE "ProductName", "neoFanSpeed"
-      VALUE "ProductVersion", "3.0.0"
+      VALUE "ProductVersion", "3.1.0"
     END
   END
   BLOCK "VarFileInfo"
