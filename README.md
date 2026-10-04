@@ -3,6 +3,8 @@
 A small temperature and fan speed monitor for Windows 98, 98SE, ME, 2000
 and XP. One program file, `NEOFAN.EXE`, runs on all of them.
 
+Current version: **3.1**. See [Version history](#version-history).
+
 ![Sensors tab](docs/sensors.png)
 
 ## What it does
@@ -113,3 +115,30 @@ time and skipped when missing.
 Wine is not real Windows. These tests show the program loads, draws and
 logs with each version's settings. They cannot reach a real sensor chip, and
 the final check is a run on a real 98, ME, 2000 or XP machine.
+
+## Version history
+
+### 3.1
+
+- The low fan speed warning now works like the temperature alarm: it
+  beeps, opens the alarm window, shows a balloon and, with "Full speed
+  when any alarm trips" ticked, sets the fans to full speed.
+- A fan that stops after start now shows 0 RPM and sets off its warning,
+  instead of dropping out of the list.
+- Fan control on the Winbond W83697HF now writes the right registers (01h
+  and 03h).
+- Mini View no longer loses a drawing pen on each repaint, which could use
+  up Windows 98 and ME graphics memory over a long run.
+- Dashed and dotted graph lines (GPU, Aux, HDD) now show as dashes and dots.
+- Long log or report paths no longer overflow the status and error text.
+- After `NFS999.CSV` the log keeps writing to that file instead of starting
+  over at `NFS000.CSV`.
+- A saved fan duty below the lowest duty now loads as the lowest duty, so
+  the screen matches the fan.
+- The low duty question waits until you let go of the slider.
+- Any ITE IT87xx chip is now named in the "not supported" banner.
+
+### 3.0
+
+- First release: Sensors, Fans, Logging and System Info tabs, Mini View,
+  tray icon, alarms and logging to CSV or text.

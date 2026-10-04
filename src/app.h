@@ -7,7 +7,7 @@
 #include "hw.h"
 
 #define APP_NAME   "neoFanSpeed"
-#define APP_VER    "3.0"
+#define APP_VER    "3.1"
 
 #define NSENS 5
 #define NFAN  3
