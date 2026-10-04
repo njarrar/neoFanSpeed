@@ -65,7 +65,7 @@ untick "Return fans to BIOS control on exit".
 
 ## Running it
 
-Copy `NEOFAN.EXE` to any folder and start it. Settings go to `NEOFAN.INI`
+A ready build is in [`build/NEOFAN.EXE`](build/NEOFAN.EXE). Copy it to any folder and start it. Settings go to `NEOFAN.INI`
 in the same folder. The first start shows the hardware scan.
 
 - `NEOFAN.EXE /demo` shows simulated readings, to try every screen on any PC.
