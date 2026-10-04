@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect x="1.5" y="1.5" width="25" height="25" rx="3" fill="#c8ccd0" stroke="#3a4048"></rect>
+  <circle cx="4.5" cy="4.5" r="1.1" fill="#3a4048"></circle>
+  <circle cx="23.5" cy="4.5" r="1.1" fill="#3a4048"></circle>
+  <circle cx="4.5" cy="23.5" r="1.1" fill="#3a4048"></circle>
+  <circle cx="14" cy="14" r="10.5" fill="#173a66" stroke="#3a4048"></circle>
+  <g fill="#8cc0f0" stroke="#173a66" stroke-width="0.6">
+    <ellipse cx="14" cy="8.2" rx="3.3" ry="5.4" transform="rotate(10 14 14) rotate(28 14 8.2)"></ellipse>
+    <ellipse cx="14" cy="8.2" rx="3.3" ry="5.4" transform="rotate(100 14 14) rotate(28 14 8.2)"></ellipse>
+    <ellipse cx="14" cy="8.2" rx="3.3" ry="5.4" transform="rotate(190 14 14) rotate(28 14 8.2)"></ellipse>
+    <ellipse cx="14" cy="8.2" rx="3.3" ry="5.4" transform="rotate(280 14 14) rotate(28 14 8.2)"></ellipse>
+  </g>
+  <circle cx="14" cy="14" r="3" fill="#eef3f8" stroke="#173a66"></circle>
+  <rect x="23" y="12.5" width="5.5" height="14" rx="2.75" fill="#ffffff" stroke="#202020"></rect>
+  <rect x="24.75" y="17" width="2" height="9" fill="#d40000"></rect>
+  <circle cx="25.75" cy="27" r="3.6" fill="#d40000" stroke="#202020"></circle>
+  <circle cx="24.8" cy="26" r="0.9" fill="#ff8a8a"></circle>
+</svg>
