@@ -35,6 +35,7 @@ LoadLibraryA
 FreeLibrary
 QueryPerformanceCounter
 QueryPerformanceFrequency
+SetErrorMode
 SetFilePointer
 SetThreadPriority
 Sleep

@@ -3,13 +3,14 @@
 A small temperature and fan speed monitor for Windows 98, 98SE, ME, 2000
 and XP. One program file, `NEOFAN.EXE`, runs on all of them.
 
-Current version: **3.2**. See [Version history](#version-history).
+Current version: **3.3**. See [Version history](#version-history).
 
 ![Sensors tab](docs/sensors.png)
 
 ## What it does
 
-- **Sensors tab**: CPU diode, motherboard, a third board sensor and the hard
+- **Sensors tab**: CPU diode, motherboard, a third board sensor, the
+  graphics chip (NVIDIA cards, through the driver's `NVCPL.DLL`) and the hard
   disk (S.M.A.R.T.) temperature, with current, lowest, highest and average
   values, an alarm limit per sensor and a 60 second history graph.
 - **Fans tab**: speed of up to three fans. When the sensor chip can drive a
@@ -21,8 +22,9 @@ Current version: **3.2**. See [Version history](#version-history).
 - **Logging tab**: writes CSV or plain text every 1 to 60 seconds, picks the
   columns, starts a new file at 1 MB (`NFS001.CSV`, `NFS002.CSV`, ...).
 - **System Info tab**: CPU name, core, clock and cache, graphics adapter,
-  chipset, BIOS, sensor chip, voltages, Windows version, memory and the file
-  system of the log drive. Copy to Clipboard and Save Report.
+  chipset, BIOS, sensor chip, voltages, Windows version, total and free
+  memory, drives that report a temperature, and the file system and free
+  space of the log drive. Copy to Clipboard and Save Report.
 - **Mini View**, a tray icon that shows the temperature, a tray menu and,
   on ME, 2000 and XP, alarm balloons.
 
@@ -124,6 +126,22 @@ logs with each version's settings. They cannot reach a real sensor chip, and
 the final check is a run on a real 98, ME, 2000 or XP machine.
 
 ## Version history
+
+### 3.3
+
+- GPU temperature on NVIDIA cards. The program asks the NVIDIA driver
+  (`NVCPL.DLL`) for the core temperature. It shows on the Sensors tab, the
+  graph and the log like any other sensor. Other cards, and
+  NVIDIA drivers without this call, show "n/a" as before.
+- Manual mode marks the safety floor on the slider, and shows a red note
+  when the fan runs below it.
+- The graph draws the alarm limit as a red dotted line. The curve editor
+  shows its four points as handles and the current temperature as a red
+  dotted line.
+- System Info shows free memory, how many drives report a S.M.A.R.T.
+  temperature, and free space on the log drive. The CPU core line adds the
+  stepping. The saved report has the same new lines.
+- Demo mode starts with a full minute of graph history.
 
 ### 3.2
 

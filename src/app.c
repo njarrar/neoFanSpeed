@@ -310,7 +310,16 @@ static void push_sensor(int i, int ok, double v)
     s->avail = ok;
     if (!ok) return;
     s->val = v;
-    if (s->nhist < HIST) s->hist[s->nhist++] = v;
+    if (g.hw.demo && s->nhist == 0) {
+        /* demo mode: start with a full minute of made-up history */
+        double cur = v - 1.5;
+        for (k = 0; k < HIST - 1; k++) {
+            cur += (v - cur) * 0.1 + (rt_rand() - 0.5) * 0.6;
+            s->hist[k] = cur;
+        }
+        s->hist[HIST - 1] = v;
+        s->nhist = HIST;
+    } else if (s->nhist < HIST) s->hist[s->nhist++] = v;
     else {
         for (k = 1; k < HIST; k++) s->hist[k - 1] = s->hist[k];
         s->hist[HIST - 1] = v;
@@ -345,7 +354,8 @@ void app_tick(int fromTimer)
         gpu += (57 + 3 * ((g.ticks / 9) % 2 ? 1 : -1) - gpu) * 0.1 + (rt_rand() - 0.5) * 0.4;
         push_sensor(S_GPU, 1, gpu);
     } else {
-        push_sensor(S_GPU, 0, 0);
+        double gpu = 0;
+        push_sensor(S_GPU, hw_gpu_temp(&g.hw, &gpu), gpu);
     }
     if (g.hw.smartDrive >= 0 && (g.ticks % 30 == 1 || !hddOk || g.hw.demo)) {
         hddOk = hw_smart_temp(&g.hw, &hdd);

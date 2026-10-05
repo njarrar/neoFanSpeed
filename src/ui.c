@@ -748,11 +748,23 @@ static void fans_refresh(int full)
         set_text(GetDlgItem(d, IDC_NCREASON), b);
     }
     if (ctrl && f->mode == M_MANUAL) {
+        static int tic = -1;
+        if (tic != g.o.floor) {
+            /* mark the safety floor on the slider */
+            SendDlgItemMessageA(d, IDC_PCTBAR, TBM_CLEARTICS, TRUE, 0);
+            SendDlgItemMessageA(d, IDC_PCTBAR, TBM_SETTIC, 0, g.o.floor);
+            tic = g.o.floor;
+            /* the warning has no background brush, so hide it before new text goes in */
+            show(GetDlgItem(d, IDC_FLOORWARN), 0);
+            wsprintfA(b, "Below the %d %% safety floor. Watch the speed reading.", g.o.floor);
+            set_text(GetDlgItem(d, IDC_FLOORWARN), b);
+        }
         if (SendDlgItemMessageA(d, IDC_PCTBAR, TBM_GETPOS, 0, 0) != f->pct)
             SendDlgItemMessageA(d, IDC_PCTBAR, TBM_SETPOS, TRUE, f->pct);
         wsprintfA(b, "%d %%", f->pct);
         set_text(GetDlgItem(d, IDC_PCTVAL), b);
     }
+    show(GetDlgItem(d, IDC_FLOORWARN), ctrl && f->mode == M_MANUAL && f->pct < g.o.floor);
     if (ctrl && f->mode == M_PROFILE) {
         for (i = 0; i < 3; i++) check(GetDlgItem(d, IDC_PSILENT + i), f->profile == i);
         check(GetDlgItem(d, IDC_PALL), g.o.applyAll);
@@ -948,7 +960,7 @@ static const char *g_infoLabels[4][8] = {
     { "Name:", "Core:", "Clock:", "L1 / L2 cache:", "Features:", "Thermal diode:", "Core voltage:", 0 },
     { "Adapter:", "Memory:", "Chip:", "Driver:", "Display:", "Fan control:", "Temp sensor:", 0 },
     { "Chipset:", "Sensor chip:", "Chip address:", "Fan headers:", "+3.3 V / +5 V:", "+12 V:", "BIOS:", 0 },
-    { "Windows:", "Memory:", "Temperatures:", "Fans:", "Sensor access:", "Log drive:", 0, 0 }
+    { "Windows:", "Memory:", "Temperatures:", "Fans:", "Sensor access:", "Log drive:", "Drive temps:", 0 }
 };
 
 static void info_init(HWND d)
@@ -983,13 +995,25 @@ static void info_val(int gi, int r, const char *s)
     set_text(GetDlgItem(g.page[3], IDC_IVAL + gi * 16 + r * 2 + 1), s);
 }
 
+typedef BOOL (WINAPI *GETDISKFREESPACEEXA_)(LPCSTR, ULARGE_INTEGER *, ULARGE_INTEGER *, ULARGE_INTEGER *);
+
 static void log_drive(char *out)
 {
-    char root[8], fs[32];
+    char root[8], fs[32], n[24];
     DWORD serial, maxlen, flags;
     if (g.log.path[1] == ':') {
         wsprintfA(root, "%c:\\", g.log.path[0]);
         if (GetVolumeInformationA(root, 0, 0, &serial, &maxlen, &flags, fs, sizeof(fs))) {
+            /* GetDiskFreeSpaceExA came with 95 OSR2, so look it up */
+            HMODULE k = GetModuleHandleA("KERNEL32.DLL");
+            GETDISKFREESPACEEXA_ gdf = k ? (GETDISKFREESPACEEXA_)GetProcAddress(k, "GetDiskFreeSpaceExA") : 0;
+            ULARGE_INTEGER avail, total, freeb;
+            if (gdf && gdf(root, &avail, &total, &freeb)) {
+                double mb = ((double)avail.HighPart * 4294967296.0 + (double)avail.LowPart) / (1024.0 * 1024.0);
+                if (mb >= 1024.0) wsprintfA(out, "%c: %s, %s GB free", g.log.path[0], fs, rt_fmt1(n, mb / 1024.0));
+                else wsprintfA(out, "%c: %s, %s MB free", g.log.path[0], fs, rt_fmtint(n, rt_round(mb)));
+                return;
+            }
             wsprintfA(out, "%c: %s", g.log.path[0], fs);
             return;
         }
@@ -1019,7 +1043,6 @@ static void info_refresh(int full)
         info_val(1, 3, h->gpu.driver);
         info_val(1, 4, h->gpu.mode);
         info_val(1, 5, "Not available");
-        info_val(1, 6, h->demo ? "Demo values" : "Not available");
         info_val(2, 0, h->chipset);
         if (h->chip.kind == CHIP_NONE)
             info_val(2, 1, h->ioAllowed ? "Not found" : "Unknown (no direct access)");
@@ -1034,14 +1057,19 @@ static void info_refresh(int full)
         } else info_val(2, 3, "Unknown");
         info_val(2, 6, h->bios);
         info_val(3, 0, h->os.name);
-        wsprintfA(b, "%d MB", h->memMB);
+        wsprintfA(b, "%d MB (%d MB free)", h->memMB, h->memFreeMB);
         info_val(3, 1, b);
+        if (h->smartDrives > 0) wsprintfA(b, "%d drive%s (S.M.A.R.T.)", h->smartDrives, h->smartDrives == 1 ? "" : "s");
+        else if (h->os.isNT && !h->os.isAdmin) rt_cpy(b, "Needs Administrator", sizeof(b));
+        else rt_cpy(b, "None found", sizeof(b));
+        info_val(3, 6, b);
         if (h->demo) info_val(3, 4, "Demo mode (no hardware access)");
         else if (h->ioAllowed) info_val(3, 4, "Direct I/O (Windows 9x)");
         else if (h->os.isNT) info_val(3, 4, "Blocked by Windows NT family");
         else info_val(3, 4, "Turned off (/nohw)");
     }
     info_val(0, 5, g.s[S_CPU].avail ? "Yes, read via sensor chip" : "Not readable");
+    info_val(1, 6, h->demo ? "Demo values" : (g.s[S_GPU].avail ? "NVIDIA driver (NVCPL.DLL)" : "Not available"));
     if (g.rd.voltOk && h->chip.supported) {
         wsprintfA(b, "%s V", rt_fmt2(v1, g.rd.vcore));
         info_val(0, 6, b);
@@ -1067,7 +1095,7 @@ static void info_refresh(int full)
 
 void ui_build_report(char *out, int cap)
 {
-    char b[200], t[24];
+    char b[200], b2[96], t[24];
     int i;
     HwInfo *h = &g.hw;
     rt_cpy(out, "neoFanSpeed " APP_VER " hardware report\r\n\r\n", cap);
@@ -1078,7 +1106,9 @@ void ui_build_report(char *out, int cap)
     wsprintfA(b, "GPU: %s, %s\r\n", h->gpu.name, h->gpu.memory); rt_cat(out, b, cap);
     wsprintfA(b, "Chipset: %s\r\n", h->chipset); rt_cat(out, b, cap);
     wsprintfA(b, "BIOS: %s\r\n", h->bios); rt_cat(out, b, cap);
-    wsprintfA(b, "Memory: %d MB\r\n", h->memMB); rt_cat(out, b, cap);
+    wsprintfA(b, "Memory: %d MB (%d MB free)\r\n", h->memMB, h->memFreeMB); rt_cat(out, b, cap);
+    wsprintfA(b, "Drives with S.M.A.R.T. temperature: %d\r\n", h->smartDrives); rt_cat(out, b, cap);
+    log_drive(b2); wsprintfA(b, "Log drive: %s\r\n", b2); rt_cat(out, b, cap);
     wsprintfA(b, "Sensor chip: %s %s (device id %Xh, kind %d)\r\n",
               h->chip.name[0] ? h->chip.name : "none", h->chip.where, h->chip.devId, h->chip.kind);
     rt_cat(out, b, cap);
@@ -1468,6 +1498,13 @@ static INT_PTR CALLBACK page_proc(HWND d, UINT m, WPARAM wp, LPARAM lp)
         SetWindowLongA(d, DWL_MSGRESULT, (LONG)on_notify(p, (NMHDR *)lp));
         return TRUE;
     }
+    case WM_CTLCOLORSTATIC:
+        if ((HWND)lp == GetDlgItem(d, IDC_FLOORWARN)) {
+            SetTextColor((HDC)wp, RGB(192, 0, 0));
+            SetBkMode((HDC)wp, TRANSPARENT);
+            return (INT_PTR)GetStockObject(NULL_BRUSH);
+        }
+        break;
     case WM_HSCROLL:
         if ((HWND)lp == GetDlgItem(d, IDC_PCTBAR)) {
             Fan *f = &g.f[g.selFan];
@@ -1883,6 +1920,7 @@ int nfs_main(void)
     hw_os(&g.hw.os);
     g.hw.demo = has_arg(cmd, "/demo") || has_arg(cmd, "-demo");
     g.hw.ioAllowed = !g.hw.os.isNT && !g.hw.demo && !has_arg(cmd, "/nohw");
+    g.hw.ioReason = has_arg(cmd, "/nohw") ? 2 : (g.hw.os.isNT ? 1 : 0);
 
     app_init_model();
     app_load_settings();

@@ -12,8 +12,8 @@ IDI_APP ICON "app.ico"
 1 24 "app.manifest"
 
 1 VERSIONINFO
-FILEVERSION 3,2,0,0
-PRODUCTVERSION 3,2,0,0
+FILEVERSION 3,3,0,0
+PRODUCTVERSION 3,3,0,0
 FILEOS VOS_NT_WINDOWS32
 FILETYPE VFT_APP
 BEGIN
@@ -23,11 +23,11 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "njarrar"
       VALUE "FileDescription", "neoFanSpeed temperature and fan monitor"
-      VALUE "FileVersion", "3.2.0"
+      VALUE "FileVersion", "3.3.0"
       VALUE "InternalName", "NEOFAN"
       VALUE "OriginalFilename", "NEOFAN.EXE"
       VALUE "ProductName", "neoFanSpeed"
-      VALUE "ProductVersion", "3.2.0"
+      VALUE "ProductVersion", "3.3.0"
     END
   END
   BLOCK "VarFileInfo"
@@ -103,12 +103,13 @@ BEGIN
 
     LTEXT           "Fixed duty cycle. Lower is quieter but runs warmer.", IDC_MANTXT, 12, 106, 284, 8
     PUSHBUTTON      "-", IDC_PCTDN, 12, 120, 14, 13
-    CONTROL         "", IDC_PCTBAR, "msctls_trackbar32", TBS_HORZ | TBS_NOTICKS | WS_TABSTOP, 28, 118, 200, 18
+    CONTROL         "", IDC_PCTBAR, "msctls_trackbar32", TBS_HORZ | TBS_BOTTOM | WS_TABSTOP, 28, 118, 200, 18
     PUSHBUTTON      "+", IDC_PCTUP, 230, 120, 14, 13
     EDITTEXT        IDC_PCTVAL, 250, 120, 40, 13, ES_READONLY | ES_RIGHT
     LTEXT           "20 %", IDC_PL20, 26, 138, 30, 8
     CTEXT           "60 %", IDC_PL60, 112, 138, 30, 8
     RTEXT           "100 %", IDC_PL100, 200, 138, 30, 8
+    LTEXT           "", IDC_FLOORWARN, 12, 152, 284, 8, NOT WS_VISIBLE
 
     AUTORADIOBUTTON "Silent", IDC_PSILENT, 12, 108, 50, 10, WS_GROUP | WS_TABSTOP
     AUTORADIOBUTTON "Normal", IDC_PNORMAL, 12, 122, 50, 10

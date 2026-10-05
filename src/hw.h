@@ -18,7 +18,7 @@ typedef struct {
 
 typedef struct {
     char name[64];
-    char core[48];
+    char core[64];
     char vendor[16];
     int family, model, stepping;
     int mhz;
@@ -71,6 +71,7 @@ typedef struct {
     char chipset[96];
     char bios[96];
     int memMB;
+    int memFreeMB;
     int ioAllowed;          /* direct port access is possible */
     int ioReason;           /* why not: 0 ok, 1 NT blocks it, 2 turned off */
     int smartDrives;        /* drives that report a temperature */
@@ -81,6 +82,7 @@ typedef struct {
 void hw_os(OsInfo *os);
 void hw_cpu(CpuInfo *cpu);
 void hw_gpu(GpuInfo *gpu);
+int  hw_gpu_temp(HwInfo *hw, double *t);
 void hw_board(HwInfo *hw);
 void hw_chip_detect(HwInfo *hw);
 int  hw_chip_read(HwInfo *hw, ChipReading *r);
