@@ -341,9 +341,9 @@ void hw_cpu(CpuInfo *c)
         if (maxe >= 0x80000005u) { cpuid(0x80000005u, r); l1 = (int)(r[2] >> 24); }
         if (maxe >= 0x80000006u) { cpuid(0x80000006u, r); l2 = (int)(r[2] >> 16); }
     }
-    if (!c->core[0]) wsprintfA(c->core, "Family %d, model %d", c->family, c->model);
+    if (!c->core[0]) wsprintfA(c->core, "Family %d, model %d, stepping %d", c->family, c->model, c->stepping);
     else {
-        wsprintfA(tmp, "%s (family %d, model %d)", c->core, c->family, c->model);
+        wsprintfA(tmp, "%s (family %d, model %d, stepping %d)", c->core, c->family, c->model, c->stepping);
         rt_cpy(c->core, tmp, sizeof(c->core));
     }
     if (l1 || l2) wsprintfA(c->cache, "%d KB / %d KB", l1, l2);
@@ -372,6 +372,7 @@ typedef struct {
     CHAR DeviceKey[128];
 } NFS_DISPLAY_DEVICEA;
 typedef BOOL (WINAPI *ENUMDISPLAYDEVICES_)(LPCSTR, DWORD, NFS_DISPLAY_DEVICEA *, DWORD);
+typedef BOOL (CDECL *NVCPLGETTHERMALSETTINGS_)(UINT, DWORD *, DWORD *, DWORD *);
 
 void hw_gpu(GpuInfo *g)
 {
@@ -425,6 +426,27 @@ void hw_gpu(GpuInfo *g)
                       GetDeviceCaps(dc, BITSPIXEL) * GetDeviceCaps(dc, PLANES));
         ReleaseDC(0, dc);
     }
+}
+
+/* GPU core temperature from the NVIDIA driver (NVCPL.DLL), when present */
+int hw_gpu_temp(HwInfo *hw, double *t)
+{
+    static int tried, mon;
+    static NVCPLGETTHERMALSETTINGS_ fn;
+    DWORD core = 0, amb = 0, lim = 0;
+    if (hw->demo || hw->ioReason == 2) return 0;
+    if (!tried) {
+        UINT old = SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX);
+        HMODULE nv = LoadLibraryA("NVCPL.DLL");
+        SetErrorMode(old);
+        tried = 1;
+        if (nv) fn = (NVCPLGETTHERMALSETTINGS_)GetProcAddress(nv, "NvCplGetThermalSettings");
+        /* drivers differ on whether the first monitor is 0 or 1 */
+        if (fn && !fn(0, &core, &amb, &lim)) mon = 1;
+    }
+    if (!fn || !fn(mon, &core, &amb, &lim) || core < 5 || core > 150) return 0;
+    *t = (double)core;
+    return 1;
 }
 
 /* ------------------------------------------------------------------ */
@@ -531,6 +553,8 @@ void hw_board(HwInfo *hw)
     hw->memMB = (int)((ms.dwTotalPhys + 1024 * 1024 - 1) / (1024 * 1024));
     /* the BIOS and video memory take a little; round up to 4 MB */
     hw->memMB = (hw->memMB + 3) & ~3;
+    hw->memFreeMB = (int)(ms.dwAvailPhys / (1024 * 1024));
+    if (hw->memFreeMB > hw->memMB) hw->memFreeMB = hw->memMB;
 }
 
 /* ------------------------------------------------------------------ */

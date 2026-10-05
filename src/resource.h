@@ -117,6 +117,7 @@
 #define IDC_FLOOR           1374
 #define IDC_FLOORSPIN       1375
 #define IDC_MSEP            1376
+#define IDC_FLOORWARN       1377
 
 /* logging page */
 #define IDC_LOGPATH         1400

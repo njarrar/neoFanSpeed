@@ -95,7 +95,7 @@ static void paint_graph(HWND w, HDC out)
 
     /* alarm limit of the selected sensor */
     if (g.s[g.selSensor].avail) {
-        HPEN p = CreatePen(PS_DOT, 1, RGB(128, 128, 64));
+        HPEN p = CreatePen(PS_DOT, 1, RGB(220, 40, 40));
         old = (HPEN)SelectObject(dc, p);
         SetBkMode(dc, TRANSPARENT);
         y = ymap(g.s[g.selSensor].limit, T, B - T);
@@ -191,10 +191,12 @@ static void paint_curve(HWND w, HDC out)
     Polyline(dc, pt, NPTS + 2);
     SelectObject(dc, old);
     DeleteObject(p);
+    for (i = 0; i < NPTS; i++)
+        fill(dc, pt[i + 1].x - 2, pt[i + 1].y - 2, pt[i + 1].x + 3, pt[i + 1].y + 3, RGB(0, 0, 128));
 
     t = app_temp_of(f->follows);
     if (t > YMIN && t < YMAX) {
-        p = CreatePen(PS_DASH, 1, RGB(0, 0, 0));
+        p = CreatePen(PS_DOT, 1, RGB(204, 0, 0));
         old = (HPEN)SelectObject(dc, p);
         x = (int)((t - YMIN) * (W - 1) / (YMAX - YMIN));
         line(dc, x, 0, x, H);
